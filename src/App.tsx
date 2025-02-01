@@ -1,5 +1,11 @@
+import { Router } from '@/router';
+
 function App() {
-  return <p className='text-5xl text-blue-400'>Runnning...</p>;
+  return (
+    <div className='flex flex-col min-h-screen'>
+      <Router />
+    </div>
+  );
 }
 
 export default App;
