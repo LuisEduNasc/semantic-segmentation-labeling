@@ -1,116 +1,192 @@
-# semantic-segmentation-labeling
+# Semantic Segmentation Labeling
 
-This front-end application project allows users to annotate semantic segmentation data interactively using brush tools or polygon drawing.
+This project is a front-end application designed for semantic segmentation labeling. It allows users to annotate images using interactive tools such as brush and polygon drawing, supporting efficient and detailed data annotation workflows.
 
-## Key features
+---
 
-- Annotation Options
-- Class Management
-- Editing Tools
-- Export Features
-- Canvas Management
+## Key Features
 
-## Folder structure
+- **Annotation Options:**
+  - Brush annotation with customizable brush sizes.
+  - Polygon annotation for precise segment drawing.
+- **Class Management:**
+  - Define class names and assign unique colors to each class.
+  - Ensure that pixel overlaps are avoided.
+- **Editing Tools:**
+  - Eraser tool to remove annotations.
+  - Undo functionality to reverse the last action.
+- **Export Features:**
+  - Export annotations in the COCO format.
+- **Canvas Management:**
+  - Responsive layout suitable for smaller screens.
+  - Interactive annotation using the Fabric.js library.
 
+---
+
+## Folder Structure
+
+```
 src
-├── assets // Static assets such as SVG, PNG, and static JS files
-├── components // Global components (e.g., UI folder, shared components)
-├── store // Global state management with Zustand
-├── data // Static data assets (e.g., JSON files)
-├── features // Feature-based modules for specific application parts
-├── pages // Main React pages for the application
-├── lib // Library facades (e.g., Axios)
-├── utils // Helper functions (e.g., formatters, pure functions)
-├── hooks // Global custom hooks
+├── assets      // Static assets such as SVG, PNG, and static JS files
+├── components   // Global components (e.g., UI folder, shared components)
+├── store        // Global state management with Zustand
+├── data         // Static data assets (e.g., JSON files)
+├── features     // Feature-based modules for specific application parts
+├── pages        // Main React pages for the application
+├── lib          // Library facades (e.g., Axios)
+├── utils        // Helper functions (e.g., formatters, pure functions)
+├── hooks        // Global custom hooks
+```
+
+---
 
 ## Development Setup
 
-Prerequisites:
+### Prerequisites
 
-- Node.js version 16 or higher
-- Package Manager: npm or yarn
-  Installation:
-- git clone <repository-url>
-- cd semantic-segmentation-labeling
-- npm install
-  // To run locally
-- npm run dev
-  // To build for production
-- npm run build
-  // Preview production build
-- npm run preview
+- **Node.js** version 16 or higher
+- **Package Manager:** npm or yarn
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/LuisEduNasc/semantic-segmentation-labeling.git
+   cd semantic-segmentation-labeling
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Run the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+4. Build for production:
+
+   ```bash
+   npm run build
+   ```
+
+5. Preview production build:
+   ```bash
+   npm run preview
+   ```
+
+---
+
+## Linting and Formatting
+
+### Linting
+
+To run ESLint:
+
+```bash
+npm run lint
+```
+
+To fix lint issues:
+
+```bash
+npm run lint:fix
+```
+
+### Formatting
+
+To format code with Prettier:
+
+```bash
+npm run format
+```
+
+---
+
+## Available Scripts
+
+- **`npm run dev`**: Start the development server.
+- **`npm run build`**: Build the application for production.
+- **`npm run preview`**: Preview the production build.
+- **`npm run lint`**: Run ESLint to check for code issues.
+- **`npm run lint:fix`**: Automatically fix linting issues.
+- **`npm run format`**: Format code using Prettier.
+
+---
 
 ## Tech Stack
 
-- React 19.x
+- **React 19.x**
+- **TypeScript**
+- **Vite** for fast development builds
+- **Tailwind CSS** for styling
+- **Zustand** for state management
+- **Fabric.js** for canvas manipulation
 
-- TypeScript
+---
 
-- Vite for fast development builds
+## Expanding ESLint Configuration
 
-- Tailwind CSS for styling
+If you need to enhance ESLint for production development:
 
-- Zustand for state management
+### Update TypeScript-Aware Rules
 
-- Fabric.js for canvas manipulation
+1. Configure the top-level `parserOptions` in the ESLint configuration:
+
+   ```js
+   export default tseslint.config({
+     languageOptions: {
+       parserOptions: {
+         project: ['./tsconfig.node.json', './tsconfig.app.json'],
+         tsconfigRootDir: import.meta.dirname,
+       },
+     },
+   });
+   ```
+
+2. Replace `tseslint.configs.recommended` with `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`.
+3. Optionally add `...tseslint.configs.stylisticTypeChecked`.
+4. Install `eslint-plugin-react` and configure it as follows:
+
+   ```js
+   import react from 'eslint-plugin-react';
+
+   export default tseslint.config({
+     settings: { react: { version: '18.3' } },
+     plugins: { react },
+     rules: {
+       ...react.configs.recommended.rules,
+       ...react.configs['jsx-runtime'].rules,
+     },
+   });
+   ```
+
+---
 
 ## COCO Format Export
 
 This application supports exporting annotations in COCO format with the following structure:
 
-Images: File names, height, and width.
+- **Images:** File names, height, and width.
+- **Annotations:** Segmentation information encoded in RLE.
+- **Categories:** Class names and IDs.
 
-Annotations: Segmentation information encoded in RLE.
+---
 
-Categories: Class names and IDs.
+## Contribution
 
-# React + TypeScript + Vite
+1. Fork the repository.
+2. Create a feature branch.
+3. Commit your changes.
+4. Push to the branch.
+5. Open a pull request.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+---
 
-Currently, two official plugins are available:
+## License
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-});
-```
-
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
-
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react';
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-});
-```
+This project is licensed under the MIT License.
