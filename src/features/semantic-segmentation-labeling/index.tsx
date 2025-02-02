@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnnotationOptions } from '@/features/semantic-segmentation-labeling/components/annotation-options';
-import { ClassManagement } from './components/class-management';
+import { ClassManagement } from '@/features/semantic-segmentation-labeling//components/class-management';
+import { FabricCanvas } from '@/features/semantic-segmentation-labeling//components/fabric-canvas';
 
 const SemanticSegmentationLabeling: React.FC = () => {
   return (
@@ -13,6 +14,7 @@ const SemanticSegmentationLabeling: React.FC = () => {
       </CardHeader>
       <CardContent>
         <AnnotationOptions />
+        <FabricCanvas />
         <ClassManagement />
       </CardContent>
     </Card>
