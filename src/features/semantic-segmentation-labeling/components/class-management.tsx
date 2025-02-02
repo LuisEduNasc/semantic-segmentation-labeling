@@ -1,0 +1,81 @@
+import { useRef, useState } from 'react';
+import { Plus, Trash } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { useClassesStore } from '@/features/semantic-segmentation-labeling/store/useClasses';
+import { hexy } from '@/utils/random-color';
+import { Input } from '@/components/ui/input';
+
+export const ClassManagement: React.FC = () => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const { classes, addClass, editClass, deleteClass } = useClassesStore();
+
+  const classRef = useRef<HTMLInputElement>(null);
+
+  const handleAddClass = () => {
+    const newClass = {
+      id: Math.random().toString(36).substring(7),
+      name: `Class ${classes.length + 1}`,
+      color: hexy(),
+    };
+    addClass(newClass);
+  };
+
+  const handleEditStart = (id: string) => {
+    setEditingId(id);
+  };
+
+  const handleEditSubmit = (id: string) => {
+    const newName = classRef.current?.value;
+    console.log('🚀 ~ handleEditSubmit ~ newName:', newName);
+    if (newName) {
+      editClass(id, newName.trim());
+    }
+    setEditingId(null);
+  };
+
+  return (
+    <div className='flex flex-col gap-4 mt-4 md:flex-row md:justify-between'>
+      <ul className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'>
+        {classes.map((value) => (
+          <li
+            key={value.id}
+            className='relative flex items-center justify-center px-4 py-1 rounded-xl font-medium h-10 border-2'
+            style={{ borderLeftColor: value.color, borderLeftWidth: '8px' }}
+            onClick={() => handleEditStart(value.id)}
+          >
+            {editingId === value.id ? (
+              <Input
+                ref={classRef}
+                type='text'
+                autoFocus
+                className='w-full border-transparent focus-visible:border-transparent focus-visible:ring-0 text-sm h-6'
+                onBlur={() => handleEditSubmit(value.id)}
+                onKeyDown={(e) => e.key === 'Enter' && handleEditSubmit(value.id)}
+              />
+            ) : (
+              value.name
+            )}
+
+            <Button
+              variant='destructive'
+              className='absolute right-[-12px] top-[-12px] cursor-pointer rounded-full py-1 px-1 h-fit'
+              onClick={() => deleteClass(value.id)}
+            >
+              <Trash />
+            </Button>
+          </li>
+        ))}
+      </ul>
+
+      <Button
+        onClick={handleAddClass}
+        className='w-full md:w-auto flex justify-center items-center gap-1'
+      >
+        <Plus />
+        Add class
+      </Button>
+    </div>
+  );
+};
