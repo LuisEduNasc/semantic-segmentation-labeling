@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Canvas, PencilBrush, FabricImage } from 'fabric';
 import { Input } from '@/components/ui/input';
+import { useClassesStore } from '../store/useClasses';
 
 export const FabricCanvas: React.FC = () => {
   const [canvasWidth, setCanvasWidth] = useState(window.innerWidth * 0.9);
@@ -8,6 +9,8 @@ export const FabricCanvas: React.FC = () => {
 
   const canvasRef = useRef<Canvas | null>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  const { getSelectedClass } = useClassesStore();
 
   const initCanvas = () => {
     if (!canvasRef.current) {
@@ -21,7 +24,7 @@ export const FabricCanvas: React.FC = () => {
         });
 
         const pencilBrush = new PencilBrush(canvas);
-        pencilBrush.color = '#000';
+        pencilBrush.color = getSelectedClass()?.color || '#000000';
         pencilBrush.width = 5;
         canvas.freeDrawingBrush = pencilBrush;
 

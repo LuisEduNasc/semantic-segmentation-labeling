@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { useClassesStore } from '@/features/semantic-segmentation-labeling/store/useClasses';
 import { hexy } from '@/utils/random-color';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 export const ClassManagement: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const { classes, addClass, editClass, deleteClass } = useClassesStore();
+  const { classes, addClass, editClass, deleteClass, selectClass } = useClassesStore();
 
   const classRef = useRef<HTMLInputElement>(null);
 
@@ -18,6 +19,7 @@ export const ClassManagement: React.FC = () => {
       id: Math.random().toString(36).substring(7),
       name: `Class ${classes.length + 1}`,
       color: hexy(),
+      selected: false,
     };
     addClass(newClass);
   };
@@ -41,9 +43,14 @@ export const ClassManagement: React.FC = () => {
         {classes.map((value) => (
           <li
             key={value.id}
-            className='relative flex items-center justify-center px-4 py-1 rounded-xl font-medium h-10 border-2'
+            className={cn(
+              'relative flex items-center justify-center px-4 py-1 rounded-xl font-medium h-10 border-2 ease-in-out transition-all',
+              value.selected
+                ? 'border-stone-500 shadow-lg shadow-stone-500/50'
+                : 'border-slate-200 border-opacity-50',
+            )}
             style={{ borderLeftColor: value.color, borderLeftWidth: '8px' }}
-            onClick={() => handleEditStart(value.id)}
+            onClick={() => selectClass(value.id)}
           >
             {editingId === value.id ? (
               <Input
@@ -55,7 +62,7 @@ export const ClassManagement: React.FC = () => {
                 onKeyDown={(e) => e.key === 'Enter' && handleEditSubmit(value.id)}
               />
             ) : (
-              value.name
+              <span onClick={() => handleEditStart(value.id)}>{value.name}</span>
             )}
 
             <Button
