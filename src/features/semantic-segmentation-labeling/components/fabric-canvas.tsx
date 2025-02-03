@@ -1,7 +1,8 @@
-import React, { use, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Canvas, PencilBrush, FabricImage } from 'fabric';
 import { Input } from '@/components/ui/input';
-import { useClassesStore } from '../store/useClasses';
+import { useClassesStore } from '@/features/semantic-segmentation-labeling/store/useClasses';
+import { useAnnotationOptionsStore } from '@/features/semantic-segmentation-labeling/store/useAnnotationOptions';
 
 export const FabricCanvas: React.FC = () => {
   const [canvasWidth, setCanvasWidth] = useState(window.innerWidth * 0.9);
@@ -11,6 +12,7 @@ export const FabricCanvas: React.FC = () => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const { getSelectedClass } = useClassesStore();
+  const { brushSize } = useAnnotationOptionsStore();
 
   const initCanvas = () => {
     if (!canvasRef.current) {
@@ -27,7 +29,7 @@ export const FabricCanvas: React.FC = () => {
         pencilBrush.color = getSelectedClass()?.color
           ? `${getSelectedClass()!.color}80`
           : '#00000080';
-        pencilBrush.width = 5;
+        pencilBrush.width = brushSize;
         canvas.freeDrawingBrush = pencilBrush;
 
         canvasRef.current = canvas;
@@ -97,10 +99,10 @@ export const FabricCanvas: React.FC = () => {
       pencilBrush.color = getSelectedClass()?.color
         ? `${getSelectedClass()!.color}80`
         : '#00000080';
-      pencilBrush.width = 5;
+      pencilBrush.width = brushSize;
       canvasRef.current.freeDrawingBrush = pencilBrush;
     }
-  }, [getSelectedClass()?.color]);
+  }, [getSelectedClass()?.color, brushSize]);
 
   return (
     <div className='flex flex-col items-center gap-4 my-4 p-4'>
