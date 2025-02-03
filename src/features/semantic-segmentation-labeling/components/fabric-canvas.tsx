@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { use, useEffect, useRef, useState } from 'react';
 import { Canvas, PencilBrush, FabricImage } from 'fabric';
 import { Input } from '@/components/ui/input';
 import { useClassesStore } from '../store/useClasses';
@@ -24,7 +24,9 @@ export const FabricCanvas: React.FC = () => {
         });
 
         const pencilBrush = new PencilBrush(canvas);
-        pencilBrush.color = getSelectedClass()?.color || '#000000';
+        pencilBrush.color = getSelectedClass()?.color
+          ? `${getSelectedClass()!.color}80`
+          : '#00000080';
         pencilBrush.width = 5;
         canvas.freeDrawingBrush = pencilBrush;
 
@@ -88,6 +90,17 @@ export const FabricCanvas: React.FC = () => {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      const pencilBrush = new PencilBrush(canvasRef.current);
+      pencilBrush.color = getSelectedClass()?.color
+        ? `${getSelectedClass()!.color}80`
+        : '#00000080';
+      pencilBrush.width = 5;
+      canvasRef.current.freeDrawingBrush = pencilBrush;
+    }
+  }, [getSelectedClass()?.color]);
 
   return (
     <div className='flex flex-col items-center gap-4 my-4 p-4'>
