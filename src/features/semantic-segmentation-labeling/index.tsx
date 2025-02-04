@@ -1,10 +1,14 @@
+import { useRef } from 'react';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnnotationOptions } from '@/features/semantic-segmentation-labeling/components/annotation-options';
 import { ClassManagement } from '@/features/semantic-segmentation-labeling//components/class-management';
 import { FabricCanvas } from '@/features/semantic-segmentation-labeling//components/fabric-canvas';
-import { Toolbox } from './components/toolbox';
+import { Toolbox } from '@/features/semantic-segmentation-labeling/components/toolbox';
 
 const SemanticSegmentationLabeling: React.FC = () => {
+  const canvasRef = useRef<{ undo: () => void }>(null);
+
   return (
     <Card>
       <CardHeader>
@@ -15,8 +19,8 @@ const SemanticSegmentationLabeling: React.FC = () => {
       </CardHeader>
       <CardContent>
         <AnnotationOptions />
-        <Toolbox />
-        <FabricCanvas />
+        <Toolbox onUndo={() => canvasRef.current?.undo()} />
+        <FabricCanvas forwardCanvasRef={canvasRef} />
         <ClassManagement />
       </CardContent>
     </Card>

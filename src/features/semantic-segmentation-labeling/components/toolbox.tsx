@@ -2,10 +2,14 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
 import { useAnnotationOptionsStore } from '@/features/semantic-segmentation-labeling/store/useAnnotationOptions';
-import { Eraser } from 'lucide-react';
+import { Eraser, Undo } from 'lucide-react';
 
-export const Toolbox: React.FC = () => {
-  const { selectedAnnotation, brushSize, setBrushSize, eraserActive, setEraserActive } =
+type ToolboxProps = {
+  onUndo: () => void;
+};
+
+export const Toolbox: React.FC<ToolboxProps> = ({ onUndo }) => {
+  const { selectedAnnotation, brushSize, setBrushSize, eraserActive, setEraserActive, paths } =
     useAnnotationOptionsStore();
 
   return (
@@ -30,6 +34,12 @@ export const Toolbox: React.FC = () => {
       >
         <Eraser />
       </Button>
+
+      {paths.length ? (
+        <Button variant='secondary' onClick={onUndo} title='Undo'>
+          <Undo />
+        </Button>
+      ) : null}
     </div>
   );
 };

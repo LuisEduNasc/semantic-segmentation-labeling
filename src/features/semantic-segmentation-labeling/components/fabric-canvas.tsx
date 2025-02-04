@@ -1,10 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Canvas, PencilBrush, FabricImage } from 'fabric';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Canvas, PencilBrush, FabricImage, Path, FabricObject } from 'fabric';
 import { Input } from '@/components/ui/input';
 import { useClassesStore } from '@/features/semantic-segmentation-labeling/store/useClasses';
 import { useAnnotationOptionsStore } from '@/features/semantic-segmentation-labeling/store/useAnnotationOptions';
 
-export const FabricCanvas: React.FC = () => {
+type FabricCanvasProps = {
+  forwardCanvasRef: React.RefObject<{
+    undo: () => void;
+  } | null>;
+};
+
+export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) => {
   const [canvasWidth, setCanvasWidth] = useState(window.innerWidth * 0.9);
   const [canvasHeight, setCanvasHeight] = useState(window.innerHeight * 0.7);
 
@@ -12,7 +18,7 @@ export const FabricCanvas: React.FC = () => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const { getSelectedClass } = useClassesStore();
-  const { brushSize, eraserActive } = useAnnotationOptionsStore();
+  const { brushSize, eraserActive, paths, setPath, removeLastPath } = useAnnotationOptionsStore();
 
   const initCanvas = () => {
     if (!canvasRef.current) {
@@ -26,7 +32,6 @@ export const FabricCanvas: React.FC = () => {
         });
 
         updateBrush(canvas);
-
         canvasRef.current = canvas;
       }
     }
@@ -34,7 +39,6 @@ export const FabricCanvas: React.FC = () => {
 
   const updateBrush = (canvas: Canvas) => {
     if (eraserActive) {
-      canvas.isDrawingMode = true;
       const eraserBrush = new PencilBrush(canvas);
       eraserBrush.width = brushSize;
       canvas.freeDrawingBrush = eraserBrush;
@@ -44,13 +48,11 @@ export const FabricCanvas: React.FC = () => {
           const path = event.path;
           path.globalCompositeOperation = 'destination-out';
           path.selectable = false;
-          // canvas.add(path);
           canvas.renderAll();
         }
       });
     } else {
       canvas.off('path:created');
-      canvas.isDrawingMode = true;
       const pencilBrush = new PencilBrush(canvas);
       pencilBrush.color = getSelectedClass()?.color
         ? `${getSelectedClass()!.color}80`
@@ -70,8 +72,11 @@ export const FabricCanvas: React.FC = () => {
 
         img.onload = function () {
           const imjObg = new FabricImage(img, {
-            left: 0,
-            top: 0,
+            centeredRotation: true,
+            centeredScaling: true,
+            scaleX: 1,
+            scaleY: 1,
+            perPixelTargetFind: false,
             selectable: false,
             evented: false,
           });
@@ -89,6 +94,30 @@ export const FabricCanvas: React.FC = () => {
       reader.readAsDataURL(file);
     }
   };
+
+  const handleUndo = () => {
+    if (canvasRef.current && paths.length > 0) {
+      const updatedPaths = [...paths];
+      const lastPath = updatedPaths.pop();
+      canvasRef.current.remove(lastPath as FabricObject);
+      removeLastPath();
+      canvasRef.current.renderAll();
+    }
+  };
+
+  const trackPaths = (canvas: Canvas) => {
+    canvas.on('path:created', (event) => {
+      if (event.path) {
+        const newPath = event.path as Path;
+        newPath.selectable = false;
+        setPath(newPath);
+      }
+    });
+  };
+
+  useImperativeHandle(forwardCanvasRef, () => ({
+    undo: handleUndo,
+  }));
 
   useEffect(() => {
     initCanvas();
@@ -119,6 +148,7 @@ export const FabricCanvas: React.FC = () => {
   useEffect(() => {
     if (canvasRef.current) {
       updateBrush(canvasRef.current);
+      trackPaths(canvasRef.current);
     }
   }, [getSelectedClass()?.color, brushSize, eraserActive]);
 
