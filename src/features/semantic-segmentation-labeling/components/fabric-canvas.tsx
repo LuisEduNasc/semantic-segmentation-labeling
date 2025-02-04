@@ -12,7 +12,7 @@ export const FabricCanvas: React.FC = () => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const { getSelectedClass } = useClassesStore();
-  const { brushSize } = useAnnotationOptionsStore();
+  const { brushSize, eraserActive } = useAnnotationOptionsStore();
 
   const initCanvas = () => {
     if (!canvasRef.current) {
@@ -25,15 +25,38 @@ export const FabricCanvas: React.FC = () => {
           backgroundColor: '#FFFFFF',
         });
 
-        const pencilBrush = new PencilBrush(canvas);
-        pencilBrush.color = getSelectedClass()?.color
-          ? `${getSelectedClass()!.color}80`
-          : '#00000080';
-        pencilBrush.width = brushSize;
-        canvas.freeDrawingBrush = pencilBrush;
+        updateBrush(canvas);
 
         canvasRef.current = canvas;
       }
+    }
+  };
+
+  const updateBrush = (canvas: Canvas) => {
+    if (eraserActive) {
+      canvas.isDrawingMode = true;
+      const eraserBrush = new PencilBrush(canvas);
+      eraserBrush.width = brushSize;
+      canvas.freeDrawingBrush = eraserBrush;
+
+      canvas.on('path:created', (event) => {
+        if (event.path) {
+          const path = event.path;
+          path.globalCompositeOperation = 'destination-out';
+          path.selectable = false;
+          // canvas.add(path);
+          canvas.renderAll();
+        }
+      });
+    } else {
+      canvas.off('path:created');
+      canvas.isDrawingMode = true;
+      const pencilBrush = new PencilBrush(canvas);
+      pencilBrush.color = getSelectedClass()?.color
+        ? `${getSelectedClass()!.color}80`
+        : '#00000080';
+      pencilBrush.width = brushSize;
+      canvas.freeDrawingBrush = pencilBrush;
     }
   };
 
@@ -47,15 +70,15 @@ export const FabricCanvas: React.FC = () => {
 
         img.onload = function () {
           const imjObg = new FabricImage(img, {
-            centeredRotation: true,
-            centeredScaling: true,
-            scaleX: 1,
-            scaleY: 1,
-            perPixelTargetFind: false,
-            selectable: true,
+            left: 0,
+            top: 0,
+            selectable: false,
+            evented: false,
           });
 
+          canvasRef.current?.clear();
           canvasRef.current?.add(imjObg);
+          canvasRef.current?.sendObjectToBack(imjObg);
           canvasRef.current?.renderAll();
         };
 
@@ -95,14 +118,9 @@ export const FabricCanvas: React.FC = () => {
 
   useEffect(() => {
     if (canvasRef.current) {
-      const pencilBrush = new PencilBrush(canvasRef.current);
-      pencilBrush.color = getSelectedClass()?.color
-        ? `${getSelectedClass()!.color}80`
-        : '#00000080';
-      pencilBrush.width = brushSize;
-      canvasRef.current.freeDrawingBrush = pencilBrush;
+      updateBrush(canvasRef.current);
     }
-  }, [getSelectedClass()?.color, brushSize]);
+  }, [getSelectedClass()?.color, brushSize, eraserActive]);
 
   return (
     <div className='flex flex-col items-center gap-4 my-4 p-4'>

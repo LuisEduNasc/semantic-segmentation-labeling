@@ -1,14 +1,17 @@
+import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
 import { useAnnotationOptionsStore } from '@/features/semantic-segmentation-labeling/store/useAnnotationOptions';
+import { Eraser } from 'lucide-react';
 
 export const Toolbox: React.FC = () => {
-  const { selectedAnnotation, brushSize, setBrushSize } = useAnnotationOptionsStore();
+  const { selectedAnnotation, brushSize, setBrushSize, eraserActive, setEraserActive } =
+    useAnnotationOptionsStore();
 
   return (
-    <div className='my-4'>
+    <div className='flex items-start gap-4 my-4'>
       {selectedAnnotation === 'brush' ? (
-        <div className='w-1/2 md:w-1/3 lg:1/4'>
+        <div className='w-1/2 md:w-1/3 lg:w-1/4'>
           <h3 className='text-lg font-semibold mb-2'>Brush Size</h3>
           <Slider
             value={[brushSize]}
@@ -19,6 +22,14 @@ export const Toolbox: React.FC = () => {
           />
         </div>
       ) : null}
+
+      <Button
+        variant={eraserActive ? 'default' : 'secondary'}
+        onClick={() => setEraserActive(!eraserActive)}
+        title='Eraser'
+      >
+        <Eraser />
+      </Button>
     </div>
   );
 };
