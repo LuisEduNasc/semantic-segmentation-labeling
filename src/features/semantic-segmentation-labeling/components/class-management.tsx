@@ -30,7 +30,6 @@ export const ClassManagement: React.FC = () => {
 
   const handleEditSubmit = (id: string) => {
     const newName = classRef.current?.value;
-    console.log('🚀 ~ handleEditSubmit ~ newName:', newName);
     if (newName) {
       editClass(id, newName.trim());
     }
@@ -38,7 +37,13 @@ export const ClassManagement: React.FC = () => {
   };
 
   return (
-    <div className='flex flex-col gap-4 mt-4 md:flex-row md:justify-between'>
+    <div className='flex flex-col gap-4 mt-4 md:flex-row md:justify-between border-2 border-slate-100 rounded p-4'>
+      <div>
+        <h3 className='text-lg'>Classes</h3>
+        <small className='text-sm text-muted-foreground'>
+          Click a class to select it, or click its title to edit the name.
+        </small>
+      </div>
       <ul className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'>
         {classes.map((value) => (
           <li
