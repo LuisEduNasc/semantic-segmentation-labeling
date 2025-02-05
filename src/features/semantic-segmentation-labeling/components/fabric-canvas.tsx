@@ -8,6 +8,8 @@ import {
   FabricObjectProps,
   SerializedObjectProps,
   ObjectEvents,
+  Point,
+  Polygon,
 } from 'fabric';
 import { Input } from '@/components/ui/input';
 import { useClassesStore } from '@/features/semantic-segmentation-labeling/store/useClasses';
@@ -22,6 +24,7 @@ type FabricCanvasProps = {
 export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) => {
   const [canvasWidth, setCanvasWidth] = useState(window.innerWidth * 0.9);
   const [canvasHeight, setCanvasHeight] = useState(window.innerHeight * 0.7);
+  const [polygonPoints, setPolygonPoints] = useState<Point[]>([]);
 
   const canvasRef = useRef<Canvas | null>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -30,11 +33,13 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
   const {
     brushSize,
     eraserActive,
+    setEraserActive,
     annotations,
     setAnnotation,
     removeLastAnnotation,
     setImageInfo,
     imageInfo,
+    selectedAnnotation,
   } = useAnnotationOptionsStore();
 
   const initCanvas = () => {
@@ -55,28 +60,69 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
   };
 
   const updateBrush = (canvas: Canvas) => {
-    if (eraserActive) {
-      const eraserBrush = new PencilBrush(canvas);
-      eraserBrush.width = brushSize;
-      canvas.freeDrawingBrush = eraserBrush;
+    if (selectedAnnotation === 'brush') {
+      if (eraserActive) {
+        const eraserBrush = new PencilBrush(canvas);
+        eraserBrush.width = brushSize;
+        canvas.freeDrawingBrush = eraserBrush;
 
-      canvas.on('path:created', (event) => {
-        if (event.path) {
-          const path = event.path;
-          path.globalCompositeOperation = 'destination-out';
-          path.selectable = false;
-          canvas.renderAll();
-        }
-      });
+        canvas.on('path:created', (event) => {
+          if (event.path) {
+            const path = event.path;
+            path.globalCompositeOperation = 'destination-out';
+            path.selectable = false;
+            canvas.renderAll();
+          }
+        });
+      } else {
+        canvas.off('path:created');
+        const pencilBrush = new PencilBrush(canvas);
+        pencilBrush.color = getSelectedClass()?.color
+          ? `${getSelectedClass()!.color}80`
+          : '#00000080';
+        pencilBrush.width = brushSize;
+        canvas.freeDrawingBrush = pencilBrush;
+      }
     } else {
-      canvas.off('path:created');
-      const pencilBrush = new PencilBrush(canvas);
-      pencilBrush.color = getSelectedClass()?.color
-        ? `${getSelectedClass()!.color}80`
-        : '#00000080';
-      pencilBrush.width = brushSize;
-      canvas.freeDrawingBrush = pencilBrush;
+      canvas.isDrawingMode = false;
+      canvas.off('mouse:down');
+      canvas.off('mouse:move');
+      canvas.off('mouse:up');
+      enablePolygonDrawing(canvas);
     }
+  };
+
+  const enablePolygonDrawing = (canvas: Canvas) => {
+    canvas.on('mouse:down', (event) => {
+      if (!event.pointer) return;
+      const point = new Point(event.pointer.x, event.pointer.y);
+      setPolygonPoints((prevPoints) => [...prevPoints, point]);
+    });
+
+    canvas.on('mouse:dblclick', () => {
+      if (polygonPoints.length > 2) {
+        const polygon = new Polygon(polygonPoints, {
+          fill: `${getSelectedClass()?.color || '#000000'}80`,
+          selectable: false,
+        });
+        canvas.add(polygon);
+        setAnnotation({
+          id: Date.now(),
+          imageId: imageInfo?.id || null,
+          categoryId: getSelectedClass()!.id,
+          segmentation: polygonPoints.map((p) => [p.x, p.y]),
+          bbox: [
+            Math.min(...polygonPoints.map((p) => p.x)),
+            Math.min(...polygonPoints.map((p) => p.y)),
+            Math.max(...polygonPoints.map((p) => p.x)),
+            Math.max(...polygonPoints.map((p) => p.y)),
+          ],
+          area: polygon.width * polygon.height,
+          path: polygon,
+        });
+        setPolygonPoints([]);
+      }
+    });
   };
 
   const handleLoadImage = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,7 +189,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
         const bbox = [path.left, path.top, path.width, path.height];
         newBboxAnnotation.selectable = false;
         setAnnotation({
-          id: 1,
+          id: Date.now(),
           imageId: imageInfo?.id || null,
           categoryId: getSelectedClass()!.id,
           segmentation: event.path.getCoords(),
@@ -161,6 +207,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
 
   useEffect(() => {
     initCanvas();
+    setEraserActive(false);
 
     const handleResize = () => {
       const width = window.innerWidth * 0.9;
@@ -190,7 +237,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
       updateBrush(canvasRef.current);
       trackPaths(canvasRef.current);
     }
-  }, [getSelectedClass()?.color, brushSize, eraserActive]);
+  }, [getSelectedClass()?.color, brushSize, eraserActive, selectedAnnotation]);
 
   return (
     <div className='flex flex-col items-center gap-4 my-4 p-4'>

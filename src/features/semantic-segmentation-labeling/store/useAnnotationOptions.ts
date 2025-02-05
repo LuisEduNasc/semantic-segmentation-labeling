@@ -19,7 +19,7 @@ interface Annotation {
   id: number;
   imageId: number | null;
   categoryId: string;
-  segmentation: Point[];
+  segmentation: Point[] | number[][];
   bbox: Array<number>;
   area: number;
   path: FabricObject<Partial<FabricObjectProps>, SerializedObjectProps, ObjectEvents>;
