@@ -1,5 +1,14 @@
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Canvas, PencilBrush, FabricImage, Path, FabricObject } from 'fabric';
+import {
+  Canvas,
+  PencilBrush,
+  FabricImage,
+  Path,
+  FabricObject,
+  FabricObjectProps,
+  SerializedObjectProps,
+  ObjectEvents,
+} from 'fabric';
 import { Input } from '@/components/ui/input';
 import { useClassesStore } from '@/features/semantic-segmentation-labeling/store/useClasses';
 import { useAnnotationOptionsStore } from '@/features/semantic-segmentation-labeling/store/useAnnotationOptions';
@@ -18,7 +27,15 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const { getSelectedClass } = useClassesStore();
-  const { brushSize, eraserActive, paths, setPath, removeLastPath } = useAnnotationOptionsStore();
+  const {
+    brushSize,
+    eraserActive,
+    annotations,
+    setAnnotation,
+    removeLastAnnotation,
+    setImageInfo,
+    imageInfo,
+  } = useAnnotationOptionsStore();
 
   const initCanvas = () => {
     if (!canvasRef.current) {
@@ -71,6 +88,13 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
         const img = new Image();
 
         img.onload = function () {
+          setImageInfo({
+            id: 1,
+            fileName: file.name,
+            width: img.width,
+            height: img.height,
+          });
+
           const imjObg = new FabricImage(img, {
             centeredRotation: true,
             centeredScaling: true,
@@ -96,11 +120,17 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
   };
 
   const handleUndo = () => {
-    if (canvasRef.current && paths.length > 0) {
-      const updatedPaths = [...paths];
-      const lastPath = updatedPaths.pop();
-      canvasRef.current.remove(lastPath as FabricObject);
-      removeLastPath();
+    if (canvasRef.current && annotations.length > 0) {
+      const updatedAnnotations = [...annotations];
+      const lastAnnotation = updatedAnnotations.pop();
+      canvasRef.current.remove(
+        lastAnnotation?.path as FabricObject<
+          Partial<FabricObjectProps>,
+          SerializedObjectProps,
+          ObjectEvents
+        >,
+      );
+      removeLastAnnotation();
       canvasRef.current.renderAll();
     }
   };
@@ -108,9 +138,19 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
   const trackPaths = (canvas: Canvas) => {
     canvas.on('path:created', (event) => {
       if (event.path) {
-        const newPath = event.path as Path;
-        newPath.selectable = false;
-        setPath(newPath);
+        const path = event.path;
+        const newBboxAnnotation = path as Path;
+        const bbox = [path.left, path.top, path.width, path.height];
+        newBboxAnnotation.selectable = false;
+        setAnnotation({
+          id: 1,
+          imageId: imageInfo?.id || null,
+          categoryId: getSelectedClass()!.id,
+          segmentation: event.path.getCoords(),
+          bbox,
+          area: newBboxAnnotation.width * newBboxAnnotation.height,
+          path,
+        });
       }
     });
   };

@@ -5,6 +5,7 @@ import { AnnotationOptions } from '@/features/semantic-segmentation-labeling/com
 import { ClassManagement } from '@/features/semantic-segmentation-labeling//components/class-management';
 import { FabricCanvas } from '@/features/semantic-segmentation-labeling//components/fabric-canvas';
 import { Toolbox } from '@/features/semantic-segmentation-labeling/components/toolbox';
+import { ExportDataset } from './components/export-dataset';
 
 const SemanticSegmentationLabeling: React.FC = () => {
   const canvasRef = useRef<{ undo: () => void }>(null);
@@ -22,6 +23,7 @@ const SemanticSegmentationLabeling: React.FC = () => {
         <Toolbox onUndo={() => canvasRef.current?.undo()} />
         <FabricCanvas forwardCanvasRef={canvasRef} />
         <ClassManagement />
+        <ExportDataset />
       </CardContent>
     </Card>
   );

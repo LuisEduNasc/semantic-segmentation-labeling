@@ -1,6 +1,29 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, devtools } from 'zustand/middleware';
-import { Path } from 'fabric';
+import {
+  FabricObject,
+  FabricObjectProps,
+  ObjectEvents,
+  Point,
+  SerializedObjectProps,
+} from 'fabric';
+
+interface ImageInfo {
+  id: number;
+  fileName: string;
+  width: number;
+  height: number;
+}
+
+interface Annotation {
+  id: number;
+  imageId: number | null;
+  categoryId: string;
+  segmentation: Point[];
+  bbox: Array<number>;
+  area: number;
+  path: FabricObject<Partial<FabricObjectProps>, SerializedObjectProps, ObjectEvents>;
+}
 
 type AnnotationOptionsStore = {
   selectedAnnotation: 'brush' | 'polygon';
@@ -9,9 +32,11 @@ type AnnotationOptionsStore = {
   setBrushSize: (size: number) => void;
   eraserActive: boolean;
   setEraserActive: (active: boolean) => void;
-  paths: Array<Path>;
-  setPath: (path: Path) => void;
-  removeLastPath: () => Array<Path>;
+  annotations: Array<Annotation>;
+  setAnnotation: (annotation: Annotation) => void;
+  removeLastAnnotation: () => Array<Annotation>;
+  imageInfo: ImageInfo | null;
+  setImageInfo: (info: ImageInfo) => void;
 };
 
 export const useAnnotationOptionsStore = create<AnnotationOptionsStore>()(
@@ -21,7 +46,8 @@ export const useAnnotationOptionsStore = create<AnnotationOptionsStore>()(
         selectedAnnotation: 'brush',
         brushSize: 1,
         eraserActive: false,
-        paths: [],
+        annotations: [],
+        imageInfo: null,
         setSelectedAnnotation: (annotation: 'brush' | 'polygon') => {
           set({ selectedAnnotation: annotation as 'brush' | 'polygon' });
         },
@@ -31,17 +57,20 @@ export const useAnnotationOptionsStore = create<AnnotationOptionsStore>()(
         setEraserActive: (active: boolean) => {
           set({ eraserActive: active });
         },
-        setPath: (path) => {
-          set((state) => ({ paths: [...state.paths, path] }));
+        setAnnotation: (annotation) => {
+          set((state) => ({ annotations: [...state.annotations, annotation] }));
         },
-        removeLastPath: () => {
-          let updatedPaths: Array<Path> = [];
+        removeLastAnnotation: () => {
+          let updatedAnnotations: Array<Annotation> = [];
           set((state) => {
-            updatedPaths = [...state.paths];
-            updatedPaths.pop();
-            return { paths: updatedPaths };
+            updatedAnnotations = [...state.annotations];
+            updatedAnnotations.pop();
+            return { annotations: updatedAnnotations };
           });
-          return updatedPaths;
+          return updatedAnnotations;
+        },
+        setImageInfo: (info: ImageInfo) => {
+          set(() => ({ imageInfo: info }));
         },
       }),
       {

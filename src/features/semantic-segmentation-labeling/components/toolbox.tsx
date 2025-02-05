@@ -9,8 +9,14 @@ type ToolboxProps = {
 };
 
 export const Toolbox: React.FC<ToolboxProps> = ({ onUndo }) => {
-  const { selectedAnnotation, brushSize, setBrushSize, eraserActive, setEraserActive, paths } =
-    useAnnotationOptionsStore();
+  const {
+    selectedAnnotation,
+    brushSize,
+    setBrushSize,
+    eraserActive,
+    setEraserActive,
+    annotations,
+  } = useAnnotationOptionsStore();
 
   return (
     <div className='flex items-start gap-4 my-4'>
@@ -35,7 +41,7 @@ export const Toolbox: React.FC<ToolboxProps> = ({ onUndo }) => {
         <Eraser />
       </Button>
 
-      {paths.length ? (
+      {annotations.length ? (
         <Button variant='secondary' onClick={onUndo} title='Undo'>
           <Undo />
         </Button>
