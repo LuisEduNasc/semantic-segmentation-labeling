@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAnnotationOptionsStore } from '@/features/semantic-segmentation-labeling/store/useAnnotationOptions';
 import { useClassesStore } from '@/features/semantic-segmentation-labeling/store/useClasses';
 
-export const ExportDataset: React.FC = () => {
+const ExportDataset: React.FC = () => {
   const { imageInfo, annotations } = useAnnotationOptionsStore();
   const { classes } = useClassesStore();
 
@@ -41,3 +41,5 @@ export const ExportDataset: React.FC = () => {
     </Button>
   );
 };
+
+export default ExportDataset;

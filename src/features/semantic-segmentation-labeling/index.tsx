@@ -1,11 +1,14 @@
-import { useRef } from 'react';
+import { useRef, lazy, Suspense } from 'react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnnotationOptions } from '@/features/semantic-segmentation-labeling/components/annotation-options';
 import { ClassManagement } from '@/features/semantic-segmentation-labeling//components/class-management';
 import { FabricCanvas } from '@/features/semantic-segmentation-labeling//components/fabric-canvas';
 import { Toolbox } from '@/features/semantic-segmentation-labeling/components/toolbox';
-import { ExportDataset } from './components/export-dataset';
+import ButtonSkeleton from '@/components/ui/button-skeleton';
+const ExportDataset = lazy(
+  () => import('@/features/semantic-segmentation-labeling/components/export-dataset'),
+);
 
 const SemanticSegmentationLabeling: React.FC = () => {
   const canvasRef = useRef<{ undo: () => void }>(null);
@@ -23,7 +26,9 @@ const SemanticSegmentationLabeling: React.FC = () => {
         <Toolbox onUndo={() => canvasRef.current?.undo()} />
         <FabricCanvas forwardCanvasRef={canvasRef} />
         <ClassManagement />
-        <ExportDataset />
+        <Suspense fallback={<ButtonSkeleton />}>
+          <ExportDataset />
+        </Suspense>
       </CardContent>
     </Card>
   );
