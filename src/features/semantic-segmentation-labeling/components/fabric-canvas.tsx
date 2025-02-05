@@ -10,6 +10,8 @@ import {
   ObjectEvents,
   Point,
   Polygon,
+  Circle,
+  Polyline,
 } from 'fabric';
 import { Input } from '@/components/ui/input';
 import { useClassesStore } from '@/features/semantic-segmentation-labeling/store/useClasses';
@@ -24,7 +26,6 @@ type FabricCanvasProps = {
 export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) => {
   const [canvasWidth, setCanvasWidth] = useState(window.innerWidth * 0.9);
   const [canvasHeight, setCanvasHeight] = useState(window.innerHeight * 0.7);
-  const [polygonPoints, setPolygonPoints] = useState<Point[]>([]);
 
   const canvasRef = useRef<Canvas | null>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -60,7 +61,12 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
   };
 
   const updateBrush = (canvas: Canvas) => {
+    canvas.off('mouse:down');
+    canvas.off('mouse:move');
+
     if (selectedAnnotation === 'brush') {
+      canvas.isDrawingMode = true;
+
       if (eraserActive) {
         const eraserBrush = new PencilBrush(canvas);
         eraserBrush.width = brushSize;
@@ -85,44 +91,92 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
       }
     } else {
       canvas.isDrawingMode = false;
-      canvas.off('mouse:down');
-      canvas.off('mouse:move');
-      canvas.off('mouse:up');
       enablePolygonDrawing(canvas);
     }
   };
 
   const enablePolygonDrawing = (canvas: Canvas) => {
+    let tempPolygonPoints: Point[] = [];
+    let tempLine: Polyline | null = null;
+    let markerObjects: Circle[] = [];
+    let lastClickTime = 0;
+
     canvas.on('mouse:down', (event) => {
       if (!event.pointer) return;
       const point = new Point(event.pointer.x, event.pointer.y);
-      setPolygonPoints((prevPoints) => [...prevPoints, point]);
+      tempPolygonPoints.push(point);
+      const currentTime = new Date().getTime();
+
+      // Check for double-click (within 300ms)
+      if (currentTime - lastClickTime < 300) {
+        finalizePolygon();
+        return;
+      }
+
+      lastClickTime = currentTime;
+      tempPolygonPoints.push(point);
+
+      const marker = new Circle({
+        radius: 3,
+        fill: 'blue',
+        left: point.x - 3,
+        top: point.y - 3,
+        selectable: false,
+      });
+      markerObjects.push(marker);
+      canvas.add(marker);
+
+      if (tempPolygonPoints.length > 1) {
+        if (tempLine) canvas.remove(tempLine);
+
+        tempLine = new Polyline(tempPolygonPoints, {
+          stroke: `${getSelectedClass()?.color || '#000000'}80`,
+          strokeWidth: 2,
+          fill: 'transparent',
+          selectable: false,
+          evented: false,
+        });
+
+        canvas.add(tempLine);
+        canvas.renderAll();
+      }
     });
 
-    canvas.on('mouse:dblclick', () => {
-      if (polygonPoints.length > 2) {
-        const polygon = new Polygon(polygonPoints, {
+    const finalizePolygon = () => {
+      if (tempPolygonPoints.length > 2) {
+        const polygon = new Polygon(tempPolygonPoints, {
           fill: `${getSelectedClass()?.color || '#000000'}80`,
-          selectable: false,
+          selectable: true,
+          strokeWidth: 2,
+          stroke: 'grey',
         });
+
+        if (tempLine) canvas.remove(tempLine);
+        markerObjects.forEach((marker) => canvas.remove(marker));
         canvas.add(polygon);
+        canvas.renderAll();
+
         setAnnotation({
           id: Date.now(),
           imageId: imageInfo?.id || null,
           categoryId: getSelectedClass()!.id,
-          segmentation: polygonPoints.map((p) => [p.x, p.y]),
+          segmentation: tempPolygonPoints.map((p) => [p.x, p.y]),
           bbox: [
-            Math.min(...polygonPoints.map((p) => p.x)),
-            Math.min(...polygonPoints.map((p) => p.y)),
-            Math.max(...polygonPoints.map((p) => p.x)),
-            Math.max(...polygonPoints.map((p) => p.y)),
+            Math.min(...tempPolygonPoints.map((p) => p.x)),
+            Math.min(...tempPolygonPoints.map((p) => p.y)),
+            Math.max(...tempPolygonPoints.map((p) => p.x)),
+            Math.max(...tempPolygonPoints.map((p) => p.y)),
           ],
           area: polygon.width * polygon.height,
           path: polygon,
         });
-        setPolygonPoints([]);
+
+        // Reset points and temporary line
+        tempPolygonPoints = [];
+        tempLine = null;
+        markerObjects = [];
       }
-    });
+    };
   };
 
   const handleLoadImage = (event: React.ChangeEvent<HTMLInputElement>) => {
