@@ -68,65 +68,87 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
     canvas.isDrawingMode = selectedAnnotation === 'brush';
 
     if (selectedAnnotation === 'brush') {
-      const pencilBrush = new PencilBrush(canvas);
-      pencilBrush.color = getSelectedClass()?.color
-        ? `${getSelectedClass()!.color}80`
-        : '#00000080';
-      pencilBrush.width = brushSize;
-      canvas.freeDrawingBrush = pencilBrush;
+      if (eraserActive) {
+        const eraserBrush = new PencilBrush(canvas);
+        eraserBrush.color = 'rgba(255, 255, 255, 1)'; // Full white for erasing
+        eraserBrush.width = brushSize;
+        canvas.freeDrawingBrush = eraserBrush;
 
-      let currentPath: Path | null = null;
-
-      canvas.on('mouse:down', () => {
-        currentPath = null;
-      });
-
-      canvas.on('path:created', (event) => {
-        currentPath = event.path as Path;
-        if (currentPath) {
-          currentPath.selectable = false;
-        }
-      });
-
-      canvas.on('mouse:up', () => {
-        if (!currentPath) return;
-
-        const pathPoints = extractPathPoints(currentPath);
-        const existingPaths = canvas.getObjects().filter((obj) => obj instanceof Path) as Path[];
-
-        let hasOverlap = false;
-
-        for (const path of existingPaths) {
-          if (path === currentPath) continue;
-
-          const existingPoints = extractPathPoints(path);
-          if (pathsTooClose(pathPoints, existingPoints, brushSize)) {
-            hasOverlap = true;
-            break;
+        canvas.on('path:created', (event) => {
+          const eraserPath = event.path;
+          if (eraserPath) {
+            // Remove intersecting objects (paths and polygons)
+            canvas.getObjects().forEach((obj) => {
+              if (obj !== eraserPath && (obj instanceof Path || obj instanceof Polygon)) {
+                if (eraserPath.intersectsWithObject(obj)) {
+                  canvas.remove(obj);
+                }
+              }
+            });
+            canvas.remove(eraserPath); // Remove the eraser path itself
+            canvas.renderAll();
           }
-        }
+        });
+      } else {
+        const pencilBrush = new PencilBrush(canvas);
+        pencilBrush.color = getSelectedClass()?.color
+          ? `${getSelectedClass()!.color}80`
+          : '#00000080';
+        pencilBrush.width = brushSize;
+        canvas.freeDrawingBrush = pencilBrush;
 
-        if (!hasOverlap) {
-          setAnnotation({
-            id: Date.now(),
-            imageId: imageInfo?.id || null,
-            categoryId: getSelectedClass()!.id,
-            segmentation: currentPath.getCoords(),
-            bbox: [currentPath.left, currentPath.top, currentPath.width, currentPath.height],
-            area: currentPath.width * currentPath.height,
-            path: currentPath,
-          });
-        } else {
-          canvas.remove(currentPath);
-        }
+        let currentPath: Path | null = null;
 
-        canvas.renderAll();
-      });
+        canvas.on('mouse:down', () => {
+          currentPath = null;
+        });
+
+        canvas.on('path:created', (event) => {
+          currentPath = event.path as Path;
+          if (currentPath) {
+            currentPath.selectable = false;
+          }
+        });
+
+        canvas.on('mouse:up', () => {
+          if (!currentPath) return;
+
+          const pathPoints = extractPathPoints(currentPath);
+          const existingPaths = canvas.getObjects().filter((obj) => obj instanceof Path) as Path[];
+
+          let hasOverlap = false;
+
+          for (const path of existingPaths) {
+            if (path === currentPath) continue;
+
+            const existingPoints = extractPathPoints(path);
+            if (pathsTooClose(pathPoints, existingPoints, brushSize)) {
+              hasOverlap = true;
+              break;
+            }
+          }
+
+          if (!hasOverlap) {
+            setAnnotation({
+              id: Date.now(),
+              imageId: imageInfo?.id || null,
+              categoryId: getSelectedClass()!.id,
+              segmentation: currentPath.getCoords(),
+              bbox: [currentPath.left, currentPath.top, currentPath.width, currentPath.height],
+              area: currentPath.width * currentPath.height,
+              path: currentPath,
+            });
+          } else {
+            canvas.remove(currentPath);
+          }
+
+          canvas.renderAll();
+        });
+      }
     } else {
       enablePolygonDrawing(canvas);
     }
 
-    // Extracts x, y coordinates from path data
     const extractPathPoints = (path: Path) => {
       return path.path
         .flat()
@@ -139,7 +161,6 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
         }, []);
     };
 
-    // Calculate the minimum distance between two paths
     const pathsTooClose = (pathA: Point[], pathB: Point[], buffer: number) => {
       for (const pointA of pathA) {
         for (const pointB of pathB) {
