@@ -63,6 +63,8 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
   const updateBrush = (canvas: Canvas) => {
     canvas.off('mouse:down');
     canvas.off('mouse:up');
+    canvas.off('path:created');
+
     canvas.isDrawingMode = selectedAnnotation === 'brush';
 
     if (selectedAnnotation === 'brush') {
@@ -89,32 +91,64 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
       canvas.on('mouse:up', () => {
         if (!currentPath) return;
 
-        // Remove overlapping paths after brush stroke is completed
-        canvas.getObjects().forEach((obj) => {
-          if (
-            obj !== currentPath &&
-            obj instanceof Path &&
-            currentPath?.intersectsWithObject(obj)
-          ) {
-            canvas.remove(obj);
-          }
-        });
+        const pathPoints = extractPathPoints(currentPath);
+        const existingPaths = canvas.getObjects().filter((obj) => obj instanceof Path) as Path[];
 
-        setAnnotation({
-          id: Date.now(),
-          imageId: imageInfo?.id || null,
-          categoryId: getSelectedClass()!.id,
-          segmentation: currentPath.getCoords(),
-          bbox: [currentPath.left, currentPath.top, currentPath.width, currentPath.height],
-          area: currentPath.width * currentPath.height,
-          path: currentPath,
-        });
+        let hasOverlap = false;
+
+        for (const path of existingPaths) {
+          if (path === currentPath) continue;
+
+          const existingPoints = extractPathPoints(path);
+          if (pathsTooClose(pathPoints, existingPoints, brushSize)) {
+            hasOverlap = true;
+            break;
+          }
+        }
+
+        if (!hasOverlap) {
+          setAnnotation({
+            id: Date.now(),
+            imageId: imageInfo?.id || null,
+            categoryId: getSelectedClass()!.id,
+            segmentation: currentPath.getCoords(),
+            bbox: [currentPath.left, currentPath.top, currentPath.width, currentPath.height],
+            area: currentPath.width * currentPath.height,
+            path: currentPath,
+          });
+        } else {
+          canvas.remove(currentPath);
+        }
 
         canvas.renderAll();
       });
     } else {
       enablePolygonDrawing(canvas);
     }
+
+    // Extracts x, y coordinates from path data
+    const extractPathPoints = (path: Path) => {
+      return path.path
+        .flat()
+        .filter((point) => typeof point === 'number')
+        .reduce<Point[]>((acc, _, index, arr) => {
+          if (index % 2 === 0) {
+            acc.push(new Point(arr[index], arr[index + 1]));
+          }
+          return acc;
+        }, []);
+    };
+
+    // Calculate the minimum distance between two paths
+    const pathsTooClose = (pathA: Point[], pathB: Point[], buffer: number) => {
+      for (const pointA of pathA) {
+        for (const pointB of pathB) {
+          const distance = pointA.distanceFrom(pointB);
+          if (distance <= buffer) return true;
+        }
+      }
+      return false;
+    };
   };
 
   const enablePolygonDrawing = (canvas: Canvas) => {
@@ -126,9 +160,17 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
     canvas.off('mouse:down');
     canvas.off('mouse:up');
 
+    const collisionBuffer = 5; // Minimum distance to other shapes
+
     canvas.on('mouse:down', (event) => {
       if (!event.pointer) return;
       const point = new Point(event.pointer.x, event.pointer.y);
+
+      // Check for proximity to existing shapes
+      if (isTooCloseToExistingShapes(canvas, point, collisionBuffer)) {
+        return;
+      }
+
       tempPolygonPoints.push(point);
       const currentTime = new Date().getTime();
 
@@ -180,17 +222,6 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
         markerObjects.forEach((marker) => canvas.remove(marker));
         canvas.add(polygon);
 
-        // Clean up overlapping objects (after polygon creation)
-        canvas.getObjects().forEach((obj) => {
-          if (
-            obj !== polygon &&
-            (obj instanceof Path || obj instanceof Polygon) &&
-            polygon.intersectsWithObject(obj)
-          ) {
-            canvas.remove(obj);
-          }
-        });
-
         setAnnotation({
           id: Date.now(),
           imageId: imageInfo?.id || null,
@@ -213,6 +244,22 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
         tempLine = null;
         markerObjects = [];
       }
+    };
+
+    // Check if the point is too close to existing shapes
+    const isTooCloseToExistingShapes = (canvas: Canvas, point: Point, buffer: number): boolean => {
+      return canvas.getObjects().some((obj) => {
+        if (obj instanceof Path || obj instanceof Polygon) {
+          const objectBoundary = obj.getBoundingRect();
+          const minX = objectBoundary.left - buffer;
+          const minY = objectBoundary.top - buffer;
+          const maxX = objectBoundary.left + objectBoundary.width + buffer;
+          const maxY = objectBoundary.top + objectBoundary.height + buffer;
+
+          return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
+        }
+        return false;
+      });
     };
   };
 
