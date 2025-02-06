@@ -62,35 +62,57 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
 
   const updateBrush = (canvas: Canvas) => {
     canvas.off('mouse:down');
-    canvas.off('mouse:move');
+    canvas.off('mouse:up');
+    canvas.isDrawingMode = selectedAnnotation === 'brush';
 
     if (selectedAnnotation === 'brush') {
-      canvas.isDrawingMode = true;
+      const pencilBrush = new PencilBrush(canvas);
+      pencilBrush.color = getSelectedClass()?.color
+        ? `${getSelectedClass()!.color}80`
+        : '#00000080';
+      pencilBrush.width = brushSize;
+      canvas.freeDrawingBrush = pencilBrush;
 
-      if (eraserActive) {
-        const eraserBrush = new PencilBrush(canvas);
-        eraserBrush.width = brushSize;
-        canvas.freeDrawingBrush = eraserBrush;
+      let currentPath: Path | null = null;
 
-        canvas.on('path:created', (event) => {
-          if (event.path) {
-            const path = event.path;
-            path.globalCompositeOperation = 'destination-out';
-            path.selectable = false;
-            canvas.renderAll();
+      canvas.on('mouse:down', () => {
+        currentPath = null;
+      });
+
+      canvas.on('path:created', (event) => {
+        currentPath = event.path as Path;
+        if (currentPath) {
+          currentPath.selectable = false;
+        }
+      });
+
+      canvas.on('mouse:up', () => {
+        if (!currentPath) return;
+
+        // Remove overlapping paths after brush stroke is completed
+        canvas.getObjects().forEach((obj) => {
+          if (
+            obj !== currentPath &&
+            obj instanceof Path &&
+            currentPath?.intersectsWithObject(obj)
+          ) {
+            canvas.remove(obj);
           }
         });
-      } else {
-        canvas.off('path:created');
-        const pencilBrush = new PencilBrush(canvas);
-        pencilBrush.color = getSelectedClass()?.color
-          ? `${getSelectedClass()!.color}80`
-          : '#00000080';
-        pencilBrush.width = brushSize;
-        canvas.freeDrawingBrush = pencilBrush;
-      }
+
+        setAnnotation({
+          id: Date.now(),
+          imageId: imageInfo?.id || null,
+          categoryId: getSelectedClass()!.id,
+          segmentation: currentPath.getCoords(),
+          bbox: [currentPath.left, currentPath.top, currentPath.width, currentPath.height],
+          area: currentPath.width * currentPath.height,
+          path: currentPath,
+        });
+
+        canvas.renderAll();
+      });
     } else {
-      canvas.isDrawingMode = false;
       enablePolygonDrawing(canvas);
     }
   };
@@ -101,21 +123,24 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
     let markerObjects: Circle[] = [];
     let lastClickTime = 0;
 
+    canvas.off('mouse:down');
+    canvas.off('mouse:up');
+
     canvas.on('mouse:down', (event) => {
       if (!event.pointer) return;
       const point = new Point(event.pointer.x, event.pointer.y);
       tempPolygonPoints.push(point);
       const currentTime = new Date().getTime();
 
-      // Check for double-click (within 300ms)
+      // Double-click check to finalize the polygon
       if (currentTime - lastClickTime < 300) {
         finalizePolygon();
         return;
       }
 
       lastClickTime = currentTime;
-      tempPolygonPoints.push(point);
 
+      // Create markers for visual guidance
       const marker = new Circle({
         radius: 3,
         fill: 'blue',
@@ -154,7 +179,17 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
         if (tempLine) canvas.remove(tempLine);
         markerObjects.forEach((marker) => canvas.remove(marker));
         canvas.add(polygon);
-        canvas.renderAll();
+
+        // Clean up overlapping objects (after polygon creation)
+        canvas.getObjects().forEach((obj) => {
+          if (
+            obj !== polygon &&
+            (obj instanceof Path || obj instanceof Polygon) &&
+            polygon.intersectsWithObject(obj)
+          ) {
+            canvas.remove(obj);
+          }
+        });
 
         setAnnotation({
           id: Date.now(),
@@ -171,12 +206,34 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
           path: polygon,
         });
 
+        canvas.renderAll();
+
         // Reset points and temporary line
         tempPolygonPoints = [];
         tempLine = null;
         markerObjects = [];
       }
     };
+  };
+
+  const trackPaths = (canvas: Canvas) => {
+    canvas.on('path:created', (event) => {
+      if (event.path) {
+        const path = event.path;
+        const newBboxAnnotation = path as Path;
+        const bbox = [path.left, path.top, path.width, path.height];
+        newBboxAnnotation.selectable = false;
+        setAnnotation({
+          id: Date.now(),
+          imageId: imageInfo?.id || null,
+          categoryId: getSelectedClass()!.id,
+          segmentation: event.path.getCoords(),
+          bbox,
+          area: newBboxAnnotation.width * newBboxAnnotation.height,
+          path,
+        });
+      }
+    });
   };
 
   const handleLoadImage = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,26 +290,6 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
       removeLastAnnotation();
       canvasRef.current.renderAll();
     }
-  };
-
-  const trackPaths = (canvas: Canvas) => {
-    canvas.on('path:created', (event) => {
-      if (event.path) {
-        const path = event.path;
-        const newBboxAnnotation = path as Path;
-        const bbox = [path.left, path.top, path.width, path.height];
-        newBboxAnnotation.selectable = false;
-        setAnnotation({
-          id: Date.now(),
-          imageId: imageInfo?.id || null,
-          categoryId: getSelectedClass()!.id,
-          segmentation: event.path.getCoords(),
-          bbox,
-          area: newBboxAnnotation.width * newBboxAnnotation.height,
-          path,
-        });
-      }
-    });
   };
 
   useImperativeHandle(forwardCanvasRef, () => ({
