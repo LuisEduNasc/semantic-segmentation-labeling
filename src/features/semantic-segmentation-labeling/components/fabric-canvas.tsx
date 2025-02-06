@@ -320,11 +320,16 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({ forwardCanvasRef }) 
             height: img.height,
           });
 
+          // Calculate scale factor to fit image within the canvas
+          const scaleX = canvasWidth / img.width;
+          const scaleY = canvasHeight / img.height;
+          const scale = Math.min(scaleX, scaleY); // Use the smaller scale to ensure the image fits
+
           const imjObg = new FabricImage(img, {
             centeredRotation: true,
             centeredScaling: true,
-            scaleX: 1,
-            scaleY: 1,
+            scaleX: scale,
+            scaleY: scale,
             perPixelTargetFind: false,
             selectable: false,
             evented: false,
