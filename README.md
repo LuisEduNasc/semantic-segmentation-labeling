@@ -125,7 +125,7 @@ npm run format
 - **Vite** for fast development builds
 - **Tailwind CSS** for styling
 - **Zustand** for state management
-- **Fabric.js** for canvas manipulation
+- **Fabric.js** for canvas manipulation (https://fabricjs.com/docs/)
 
 ---
 
@@ -190,3 +190,8 @@ This application supports exporting annotations in COCO format with the followin
 ## License
 
 This project is licensed under the MIT License.
+
+### Future Improvements:
+
+- \*\*Improve the behavior of the eraser for brush drawing.
+- \*\*Enhance the undo functionality to only undo visible drawings.
