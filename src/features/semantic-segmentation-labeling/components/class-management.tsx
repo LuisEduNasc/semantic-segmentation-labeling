@@ -50,7 +50,7 @@ export const ClassManagement: React.FC = () => {
             <li
               key={value.id}
               className={cn(
-                'relative flex items-center justify-center px-4 py-1 rounded-xl font-medium h-10 border-2 ease-in-out transition-all',
+                'relative flex items-center justify-center px-8 py-1 rounded-xl font-medium h-10 border-2 ease-in-out transition-all',
                 value.selected
                   ? 'border-stone-500 shadow-lg shadow-stone-500/50'
                   : 'border-slate-200 border-opacity-50',

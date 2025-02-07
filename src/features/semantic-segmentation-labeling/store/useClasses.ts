@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, devtools } from 'zustand/middleware';
 
+import { hexy } from '@/utils/random-color';
 interface Class {
   id: string;
   name: string;
@@ -21,7 +22,14 @@ export const useClassesStore = create<ClassesStore>()(
   devtools(
     persist(
       (set, get) => ({
-        classes: [],
+        classes: [
+          {
+            id: Math.random().toString(36).substring(7),
+            name: `Class 1`,
+            color: hexy(),
+            selected: true,
+          },
+        ],
         addClass: (newClass: Class) => {
           const currentClasses = get().classes;
           set({ classes: [...currentClasses, newClass] });
